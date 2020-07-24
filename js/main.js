@@ -6,11 +6,62 @@ var camera;
 var light;
 var cube;
 var axesHelperLocal;
-var gravity = 9.8;
+var gravity = 9.81;
 var accel;
 var speed;
 var clock = new THREE.Clock();
 var delta;
+var angle = 0;
+var stats = new Stats();
+
+
+// The total time it will take the object to get to the bottom
+var time;
+
+// The total distance the object need to traverse (hipotenuse)
+var distance;
+
+// 
+var triangle3dsize;
+
+// The bounding box of the Triangle 3D
+var box;
+
+class Triangle3D extends THREE.Mesh
+{
+    constructor()
+    {
+        super();
+        // GEOMETRY
+        var positions = new Float32Array(   [-0.5, 0.5,  0.5,
+                                            -0.5,-0.5, 0.5,
+                                            0.5, -0.5, 0.5, 
+                                            -0.5, 0.5, -0.5,
+                                            -0.5,-0.5, -0.5,
+                                            0.5, -0.5, -0.5, 
+                                            ] );
+        var indices = [ 0,1,2,
+                        5,4,3,     
+                        0,3,4,
+                        0,4,1,
+                        0,2,5,
+                        0,5,3,
+                        5,2,1,
+                        5,1,4
+                        ];
+        var coordTexture = [0., 1.,
+                            0., 0.,
+                            1., 0.,
+                            1., 1.];
+
+        this.geometry = new THREE.BufferGeometry();
+        this.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+        this.geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+        this.geometry.computeFaceNormals();     // Normals
+
+        this.material = new THREE.MeshBasicMaterial({color: 'gray'});
+    }
+}
 
 function getVariables(mass, roz, angle)
 {
@@ -21,8 +72,24 @@ function getVariables(mass, roz, angle)
     var Fr = roz * N;
     var sumF = Px - Fr;
     var accel = sumF / mass;
+    time = Math.sqrt((2*distance) / accel);
+    console.log("P=", P);
+    console.log("Px=", Px);
+    console.log("Py=", Py);
+    console.log("Accel=", accel);
+    console.log("Fr=", Fr);
 
     return accel;
+}
+
+function getAngle(height, base)
+{
+    distance = Math.sqrt((height*height)+(base*base));
+    var angle = Math.asin(height / distance);
+    var angle2 = Math.atan(height / base);
+    console.log(angle);
+
+    return angle;
 }
 
 class Axes extends THREE.Mesh
@@ -54,16 +121,16 @@ function update()
 
 function renderLoop() 
 {
+    stats.begin();
     delta = clock.getDelta();
     engine.render(scene, camera);
-    if (clock.elapsedTime <= 4.79)
+    if (cube.position.x <= box.max.x && accel > 0)
     {
-        console.log();
-        console.log("speed: ", speed, " at time: ", clock.elapsedTime)
+        //console.log("speed: ", speed, " at time: ", clock.elapsedTime)
         speed = (0 + accel)*clock.elapsedTime;
 
-        cube.position.x += (speed*delta)*Math.cos(0.628319);
-        cube.position.y -= (speed*delta)*Math.sin(0.628319);
+        cube.position.x += (speed*delta)*Math.cos(angle);
+        cube.position.y -= (speed*delta)*Math.sin(angle);
 
         axesHelperLocal.update(clock.getDelta());
         //cube.rotation.y = cube.rotation.y + 0.01;
@@ -72,81 +139,61 @@ function renderLoop()
     {
         clock.stop();
         console.log(clock.elapsedTime)
-        console.log(cube.position)
     }
     update();
+    stats.end();
     requestAnimationFrame(renderLoop);
 }
 
 function main()
 { 
     
-    accel = getVariables(0.27, 0.21, 0.628319);
     // CANVAS
     canvas = document.getElementById("canvas");
+
+    stats.showPanel( 1 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+    document.body.appendChild( stats.dom );
 
     // RENDERER ENGINE
     engine = new THREE.WebGLRenderer({canvas: canvas});
     engine.setSize(window.innerWidth, window.innerHeight);
-    engine.setClearColor(new THREE.Color(0.2, 0.2, 0.35), 1.);   
+    engine.setClearColor(new THREE.Color(0.9411, 0.9411, 0.9411), 1.);   
 
     // FLOOR
-    var floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 100, 100), new THREE.MeshBasicMaterial({wireframe: true, color: "gray"})); 
-    floor.rotation.set(-Math.PI / 2., 0., 0.);    
+    var planeGeometry = new THREE.PlaneBufferGeometry( 250, 250 );
+    planeGeometry.rotateX( - Math.PI / 2 );
+    var planeMaterial = new THREE.ShadowMaterial( { opacity: 0.2 } );
+
+    var floor = new THREE.Mesh( planeGeometry, planeMaterial );
+    floor.position.y = -1;
+    floor.receiveShadow = true;
+
+    // FLOOR HELPER
+    var helper = new THREE.GridHelper( 250, 250 );
+    helper.material.opacity = 0.25;
+    helper.material.transparent = true;
 
     // MODELS
+    // THE RAMP
+    var mesh = new Triangle3D(); 
+    mesh.scale.set(100, 50, 1.);
+
+    box = new THREE.Box3().setFromObject( mesh );
+    triangle3dsize = new THREE.Vector3();
+    box.getSize(triangle3dsize);
+    //mesh.position.y = size.y / 2.;
+    angle = getAngle(triangle3dsize.y, triangle3dsize.x)
+    accel = getVariables(2, 0.3, angle);
+    console.log(box)
+
+
     // CUBE
     var geometry = new THREE.BoxGeometry(1, 1, 1);
-    var material = new THREE.MeshBasicMaterial({wireframe: true, color: "white"});
+    var material = new THREE.MeshBasicMaterial({wireframe: true, color: "black"});
     cube = new THREE.Mesh(geometry, material);
-    cube.position.set(0, cube.geometry.parameters.height/2, 0);
-    cube.rotateZ(0.628319);
-
-    // PYRAMID
-    var geometry = new THREE.ConeGeometry( 1, 1, 4 );
-    var material = new THREE.MeshBasicMaterial({wireframe: true, color: "white"});
-    var cone = new THREE.Mesh( geometry, material );
-    cone.position.set(4, cone.geometry.parameters.height/2, 0);
-    cone.geometry.rotateY(45 * Math.PI/180);
-    cone.geometry.rotateZ(-90 * Math.PI/180);
-
-    var pts = [
-        //
-        new THREE.Vector3(0, 0.5, 1),
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 0, 1),
-      new THREE.Vector3(1, 0, 1),
-      new THREE.Vector3(1, 0, 0),
-      new THREE.Vector3(0, 0.5, 0),
-    ];
+    cube.position.set(box.min.x, box.max.y + 0.7, 0);
+    cube.rotation.z = -(angle);
     
-    var geom = new THREE.BufferGeometry().setFromPoints(pts);
-    geom.setIndex([
-        0, 1, 2,
-      0, 2, 3, 
-      0, 3, 4,
-      0, 4, 1,
-      1, 3, 2,
-      1, 4, 3,
-      5, 1, 4,
-      5, 0, 4,
-      5, 2, 1
-    ]);
-    geom.computeVertexNormals();
-    
-    var mat = new THREE.MeshStandardMaterial({color: "white", wireframe: true});
-    
-    var mesh = new THREE.Mesh(geom, mat);
-
-    // ArrowHelper
-    var direction = new THREE.Vector3(0.5, 0.5, 0.5);
-    var lenght = direction.length();
-    var uDirection = direction.normalize(); // Gets the unitary vector 
-    var origin = new THREE.Vector3(0,0,0);
-    var color = "yellow";
-
-    var ArrowHelper = new THREE.ArrowHelper(uDirection, origin, lenght, color);
-
     // THREE js Axes Helper (for global scene)
     var axesHelper = new THREE.AxesHelper(4);
 
@@ -158,11 +205,12 @@ function main()
     scene.add(floor);
     scene.add(cube);    // CUBO   
     scene.add(mesh);
-    scene.add(ArrowHelper); 
     scene.add(axesHelperLocal);
     scene.add(axesHelper);
+    scene.add( helper );
 
     // CAMERA
+    //camera = new THREE.OrthographicCamera(  );
     camera = new THREE.PerspectiveCamera(60., canvas.width / canvas.height, 0.01, 10000.);  // CAMERA
     camera.position.set(0., 0, 80.);         
  
