@@ -37,10 +37,10 @@ function sliderBaseListener()
     box = new THREE.Box3().setFromObject( ramp );
     var test = new THREE.Vector3();
     box.getSize(test);
-    console.log(test)
 
     // With the height and the base, we get the angle and the distance
-    angle = getAngle(test.y, test.x)
+    angle = getAngle(test.y, test.x);
+    ramp.updateTextureRepeat();
     
     // Update the cube position
     cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0); 
@@ -203,11 +203,16 @@ function startSimulation()
 
     pausedTime = 0;
     clock.start();
+    positionalAudio.play();
 }
 
 function pauseSimulation()
 {
     pause = !pause;
+    if (pause)
+        positionalAudio.pause();
+    else
+    positionalAudio.play();
 }
 
 function changeBg()

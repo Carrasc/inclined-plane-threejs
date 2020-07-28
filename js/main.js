@@ -15,6 +15,8 @@ var controlCameraActive;
 var controlPerspective;
 var cubeCamera;
 
+var positionalAudio;
+
 var floor;
 var floorHelper;
 var ramp;
@@ -103,6 +105,33 @@ class Triangle3D extends THREE.Mesh
                                             -0.5,-0.5, 0.5,     //22 1.3
                                             -0.5,-0.5, -0.5,    //23 4.3
                                             ] );
+        
+        var coordTexture = [
+            0., 0.,
+            0., 0.,
+            0., 0.,
+            0., 0.,
+
+            0., 0.,
+            0., 0.,
+            0., 0.,
+            0., 0.,
+
+            0., 0.,
+            0., 0.,
+            0., 0.,
+            1., 1.,
+
+            0., 0.,
+            0., 0.,
+            0., 0.,
+            0., 0.,
+
+            1., 0.,
+            1., 0.,
+            0., 1.,
+            0., 1.,
+        ];
 
         var indices = [ 0,3,6,  // Face triangle front
                         15,12,9, // Face triangle back    
@@ -112,16 +141,27 @@ class Triangle3D extends THREE.Mesh
                         19,17,11,      //Ramp plane 2
                         20,8,5,      // Bottom plane 1
                         21,22,23       // Bottom plane 2
-                        
                         ];
 
         this.geometry = new THREE.BufferGeometry();
         this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        this.geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(coordTexture), 2));
         this.geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
-        //this.geometry.computeFaceNormals();     // Normals
+        this.geometry.computeFaceNormals();     // Normals
         this.geometry.computeVertexNormals(); //<-- this
 
-        this.material = new THREE.MeshPhongMaterial({color: 'gray', shininess: 150});
+        this.texture = new THREE.TextureLoader().load("img/track.png");
+        this.texture.wrapS = THREE.ReapeatWrapping;
+        this.texture.wrapT = THREE.ReapeatWrapping;
+        this.texture.repeat.set(1, 10);
+
+        this.material = new THREE.MeshStandardMaterial({map: this.texture, color: 'white'});
+    }
+
+    updateTextureRepeat()
+    {
+        this.texture.repeat.set(1, distance/4);
+        this.material = new THREE.MeshStandardMaterial({map: this.texture, color: 'white'});
     }
 }
 
@@ -226,6 +266,7 @@ function update()
     else 
     {
         clock.stop();
+        positionalAudio.stop();
         //console.log(clock.elapsedTime)
     }
 
@@ -240,6 +281,9 @@ function renderLoop()
 
     if(!multiview)
     {
+        // Lower the volume when in perspective mode
+        positionalAudio.setVolume( 0.3 );
+
         // Camera Observer
         cameraPerspective.aspect = canvas.width / canvas.height;
         cameraPerspective.updateProjectionMatrix();
@@ -254,6 +298,9 @@ function renderLoop()
     }
     else
     {
+        // Increase the volume in first person for immersion
+        positionalAudio.setVolume( 0.8 );
+
         // Ortho camera doesnt work well with scene texture background. 
         // We need to reset the background if the user wants multiview
         scene.background = new THREE.Color(0.9411, 0.9411, 0.9411);
@@ -345,7 +392,7 @@ function main()
     floorHelper.position.y = -triangle3dsize.y / 2 ;
 
     // With the height and the base, we get the angle and the distance
-    angle = getAngle(triangle3dsize.y, triangle3dsize.x)
+    angle = getAngle(triangle3dsize.y, triangle3dsize.x);
     // Compute the simulation given the mass, roz coeficient and angle 
     accel = getVariables(angle);
     updateVariableTexts();
@@ -374,13 +421,13 @@ function main()
 
     // CAMERA
 
-    // OBSERVER PERSPECTIVE
+    // CAMERA PERSPECTIVE
     cameraPerspective = new THREE.PerspectiveCamera(50., canvas.width / canvas.height, 0.1, 10000.);  // CAMERA
     cameraPerspective.position.set(40, box.max.y / 2, 60)
     cameraPerspective.lookAt(scene.position); 
     cameraPerspective.up.set(0., 1., 0.);  
 
-    // OBSERVER ORTHO
+    // CAMERA ORTHO
     cameraOrtho = new THREE.OrthographicCamera(- 250, 250, 250, -250, 1, 1000 );  // CAMERA
     cameraOrtho.position.set(0, 0, 100)
     cameraOrtho.lookAt(scene.position); 
@@ -422,9 +469,27 @@ function main()
     pointLight.castShadow = true;
     pointLight.position.set(-20, 25, 10);
     scene.add( pointLight );
-
     //var helper = new THREE.PointLightHelper( pointLight, 5 , "red");
     //scene.add( helper );
+
+    var listener = new THREE.AudioListener();
+    cameraFirstPerson.add( listener );
+
+    positionalAudio = new THREE.PositionalAudio( listener );
+
+    // load a sound and set it as the PositionalAudio object's buffer
+    var audioLoader = new THREE.AudioLoader();
+    audioLoader.load( 'sounds/cart_sound.mp3', function( buffer ) {
+        positionalAudio.setBuffer( buffer );
+        positionalAudio.setRefDistance( 20 );
+        positionalAudio.playbackRate = 5;
+        positionalAudio.setDirectionalCone( 230, 60, 0.1 );
+        positionalAudio.setMaxDistance( 10 );
+        positionalAudio.setVolume( 0.3 );
+    });
+
+    cube.add(positionalAudio);
+
 
     light = new THREE.AmbientLight("white", 0.5);  
     scene.add(light); 
