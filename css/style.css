@@ -34,4 +34,26 @@ html, body
 	z-index: 1; /* TODO Solve this in HTML */
 }
 
+.p {
+	background-color: orange;
+	width: 12px; height: 12px;
+	float: left;
+}
+
+/* basic positioning */
+.legend { 
+	list-style: none; 
+	padding-inline-start: 0px; 
+	text-align: center;
+	margin-block-start: 0px;
+	margin-block-end: 0px;
+}
+.legend li { margin-right: 0px; }
+.legend span { border: 1px solid #ccc; float: left; width: 12px; height: 12px; margin: 2px; }
+/* your colors */
+.legend .superawesome { background-color: orange; }
+.legend .awesome { background-color: red; }
+.legend .kindaawesome { background-color: green; }
+.legend .notawesome { background-color: purple; }
+
 

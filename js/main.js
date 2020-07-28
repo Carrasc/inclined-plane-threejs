@@ -36,7 +36,7 @@ var Py;
 var Fr;
 var elapsedTime = 0;
 var roz = 0.3;
-var mass = 2;
+var mass = 5;
 
 var clock = new THREE.Clock();
 var pausedTime = 0;
@@ -143,7 +143,7 @@ class Axes extends THREE.Mesh
         this.add(this.arrowHelperW);
         this.add(this.arrowHelperPy);
         this.add(this.arrowHelperFr);
-        this.visible = false;
+        this.visible = true;
     }
 
     update()
@@ -465,7 +465,7 @@ function main()
         roz: roz, 
         mass: mass, 
         wireframe: false,
-        axes: false, 
+        axes: true, 
         shadows: true, 
         angle: (180/Math.PI)*angle
     };
@@ -476,7 +476,7 @@ function main()
 
     var sliderBase = vars.add(guiControls, 'base', 2., 150., 0.1).name('Base (m)');
     var sliderHeight = vars.add(guiControls, 'height', 2., 150., 0.1).name('Height (m)').listen(); // listen makes the variable update if it changes 
-    var angleSlider = vars.add(guiControls, 'angle', 1, 60., 0.01).name('Angle (degrees)').listen();
+    var angleSlider = vars.add(guiControls, 'angle', 0, 80., 0.01).name('Angle (degrees)').listen();
     var sliderSpeed = vars.add(guiControls, 'initSpeed', 0, 150., 0.01).name('Initial speed (m/s)');
     var sliderRoz = vars.add(guiControls, 'roz', 0, 2., 0.01).name('Roz coeficient (resistance of the surface)');
     var massSlider = vars.add(guiControls, 'mass', 0, 200., 0.1).name('Mass (kg)');
