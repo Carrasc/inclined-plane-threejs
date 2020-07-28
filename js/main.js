@@ -5,6 +5,7 @@ var scene;
 var skyboxActive = false;
 var background;
 var pointLight;
+var light;
 
 // Camera variables
 var cameraPerspective;
@@ -15,12 +16,13 @@ var controlCameraActive;
 var controlPerspective;
 var cubeCamera;
 
+// Audio
 var positionalAudio;
 
+// The floor, the ramp and the cube (with its axes as forces)
 var floor;
 var floorHelper;
 var ramp;
-var light;
 var cube;
 var axesHelperLocal;
 
@@ -65,11 +67,6 @@ var time;
 // The total distance the object need to traverse (hipotenuse)
 var distance;
 
-// 
-var triangle3dsize;
-
-// The bounding box of the Triangle 3D
-var box;
 
 class Triangle3D extends THREE.Mesh
 {
@@ -177,8 +174,8 @@ function getVariables(angle)
 function getAngle(height, base)
 {
     distance = Math.sqrt((height*height)+(base*base));
-    var angle = Math.asin(height / distance);
-    var angle2 = Math.atan(height / base);
+    //var angle = Math.asin(height / distance);
+    var angle = Math.atan(height / base);
 
     return angle;
 }
@@ -204,7 +201,7 @@ function update()
     // Paused time is 0 at first, but if the user pauses it adds that delta (which is the time the clock was paused) to this variable
     elapsedTime = clock.elapsedTime - pausedTime;
 
-    if (cube.position.x <= (box.max.x + 0.5) && accel > 0)
+    if (cube.position.x <= ((guiControls.base/2) + 0.5) && accel > 0)
     {
         //console.log("speed: ", speed, " at time: ", clock.elapsedTime)
         speed = initialSpeed + (accel*elapsedTime);
@@ -244,7 +241,7 @@ function renderLoop()
     if(!multiview)
     {
         // Lower the volume when in perspective mode
-        positionalAudio.setVolume( 0.3 );
+        positionalAudio.setVolume(0.3);
 
         // Camera Observer
         cameraPerspective.aspect = canvas.width / canvas.height;
@@ -261,7 +258,7 @@ function renderLoop()
     else
     {
         // Increase the volume in first person for immersion
-        positionalAudio.setVolume( 0.8 );
+        positionalAudio.setVolume(0.8);
 
         // Ortho camera doesnt work well with scene texture background. 
         // We need to reset the background if the user wants multiview
@@ -326,11 +323,7 @@ function main()
     engine.shadowMap.type = THREE.PCFShadowMap; 
 
     // FLOOR
-    var planeGeometry = new THREE.PlaneGeometry( 250, 250 );
-    planeGeometry.rotateX( - Math.PI / 2 );
-    var planeMaterial = new THREE.ShadowMaterial( { opacity: 0.3 } );
-
-    floor = new THREE.Mesh( planeGeometry, planeMaterial );
+    floor = new THREE.Mesh(new THREE.PlaneGeometry(250, 250).rotateX( - Math.PI / 2 ), new THREE.ShadowMaterial({ opacity: 0.3 }));
     floor.receiveShadow = true;
 
     // FLOOR HELPER
@@ -344,17 +337,17 @@ function main()
     ramp.castShadow = true;
     ramp.scale.set(10, 10, 2.5);
 
-    // Create a Bounding Box for the ramp to know its height and width
-    box = new THREE.Box3().setFromObject( ramp );
-    triangle3dsize = new THREE.Vector3();
-    box.getSize(triangle3dsize);
+    // Create a Bounding Box for the ramp to know its height and width. (only the first time, we can then know with guiControls.base and guiControls.height)
+    var bBox = new THREE.Box3().setFromObject( ramp );
+    var rampSize = new THREE.Vector3();
+    bBox.getSize(rampSize);
 
     // Move the floor to match the ramp
-    floor.position.y = (-triangle3dsize.y / 2) - .1;
-    floorHelper.position.y = -triangle3dsize.y / 2 ;
+    floor.position.y = (-rampSize.y / 2) - .1;
+    floorHelper.position.y = -rampSize.y / 2 ;
 
     // With the height and the base, we get the angle and the distance
-    angle = getAngle(triangle3dsize.y, triangle3dsize.x);
+    angle = getAngle(rampSize.y, rampSize.x);
     // Compute the simulation given the mass, roz coeficient and angle 
     accel = getVariables(angle);
     updateVariableTexts();
@@ -362,53 +355,63 @@ function main()
     // THE CUBE
     cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({map: new THREE.TextureLoader().load("img/crate.gif")}));
     cube.castShadow = true;
-    cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0);
+    cube.position.set(bBox.min.x + (0.5*Math.sin(angle)), bBox.max.y + (0.5*Math.cos(angle)), 0);
     cube.rotation.z = -(angle); // Rotate the angle (negative) so it matches the ramp and it looks like its sliding down
-    
-    // THREE js Axes Helper (for global scene)
-    var axesHelper = new THREE.AxesHelper(4);
 
-    // Axes Class Object (for a specific object)
+    // Axes Class Object (the cube forces vectors)
     axesHelperLocal = new Axes(cube);
 
     // SCENEGRAPH
     scene = new THREE.Scene();  
     scene.add(floor);
-    scene.add(cube);    // CUBO   
+    scene.add(cube);       
     scene.add(ramp);
     scene.add(axesHelperLocal);
-    //scene.add(axesHelper);
     scene.add(floorHelper);
+
+    // THREE js Axes Helper (for global scene)
+    //var axesHelper = new THREE.AxesHelper(4);
+    //scene.add(axesHelper);
 
     // CAMERAS
     // CAMERA PERSPECTIVE
     cameraPerspective = new THREE.PerspectiveCamera(50., canvas.width / canvas.height, 0.1, 10000.);  // CAMERA
-    cameraPerspective.position.set(15, box.max.y / 2, 18)
+    cameraPerspective.position.set(15, bBox.max.y / 2, 18);
     cameraPerspective.lookAt(scene.position); 
     cameraPerspective.up.set(0., 1., 0.);  
+    scene.add(cameraPerspective);  
+
+    // The controls for the perspective camera (main view)
+    controlPerspective = new THREE.OrbitControls(cameraPerspective, canvas);   
+    controlPerspective.maxDistance = 350;
+    controlPerspective.minDistance = 1;
 
     // CAMERA ORTHO
     cameraOrtho = new THREE.OrthographicCamera(- 250, 250, 250, -250, 1, 1000 );  // CAMERA
     cameraOrtho.position.set(0, 0, 100)
     cameraOrtho.lookAt(scene.position); 
     cameraOrtho.up.set(0., 1., 0.);
-    if ((triangle3dsize.x <= 20 && triangle3dsize.y <= 40) || (triangle3dsize.y <= 20 && triangle3dsize.x <= 40))
+    if ((rampSize.x <= 20 && rampSize.y <= 40) || (rampSize.y <= 20 && rampSize.x <= 40))
         cameraOrtho.zoom = 10;  
-    else if ((triangle3dsize.x > 20 && triangle3dsize.x < 70) && (triangle3dsize.y > 20 && triangle3dsize.y < 70))
+    else if ((rampSize.x > 20 && rampSize.x < 70) && (rampSize.y > 20 && rampSize.y < 70))
         cameraOrtho.zoom = 6.5; 
 
-    else if (triangle3dsize.x >= 120 || triangle3dsize.y >= 120)
+    else if (rampSize.x >= 120 || rampSize.y >= 120)
         cameraOrtho.zoom = 2; 
     else {
         cameraOrtho.zoom = 4; 
     }
+    scene.add(cameraOrtho);
     
     // CAMERA FIRST PERSON
     cameraFirstPerson = new THREE.PerspectiveCamera(103., 0.5*canvas.width / canvas.height, 0.1, 1000.);  // CAMERA
-    cameraFirstPerson.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0); 
+    cameraFirstPerson.position.set(bBox.min.x + (0.5*Math.sin(angle)), bBox.max.y + (0.5*Math.cos(angle)), 0); 
     cameraFirstPerson.rotation.y = -(Math.PI / 180)*90; 
     cameraFirstPerson.lookAt(0,5,0); 
-    var cameraHelper = new THREE.CameraHelper(cameraFirstPerson);
+    scene.add(cameraFirstPerson);
+    //var cameraHelper = new THREE.CameraHelper(cameraFirstPerson);
+    //scene.add(cameraHelper);
+
 
     // CAMERA CUBEMAP (FOR TEXTURES)
     cubeCamera = new THREE.CubeCamera(1000, 1000, 500);
@@ -416,25 +419,23 @@ function main()
     scene.add(cubeCamera);
 
 
-    controlPerspective = new THREE.OrbitControls(cameraPerspective, canvas);   
-    controlPerspective.maxDistance = 350;
-    controlPerspective.minDistance = 1;
-    scene.add(cameraPerspective);  
-    scene.add(cameraFirstPerson);
-    scene.add(cameraOrtho);
-    //scene.add(cameraHelper);
-
     // LIGHTS
+    // POINT LIGHT FOR SHADOWS 
     pointLight = new THREE.PointLight();
     pointLight.castShadow = true;
     pointLight.position.set(-20, 25, 10);
-    scene.add( pointLight );
+    scene.add(pointLight);
     //var helper = new THREE.PointLightHelper( pointLight, 5 , "red");
     //scene.add( helper );
 
+    // AMBIENT LIGHT FOR GENERAL COLOR
+    light = new THREE.AmbientLight("white", 0.5);  
+    scene.add(light); 
+
+
+    // AUDIO 
     var listener = new THREE.AudioListener();
     cameraFirstPerson.add( listener );
-
     positionalAudio = new THREE.PositionalAudio( listener );
 
     // load a sound and set it as the PositionalAudio object's buffer
@@ -447,17 +448,13 @@ function main()
         positionalAudio.setMaxDistance( 10 );
         positionalAudio.setVolume( 0.3 );
     });
-
     cube.add(positionalAudio);
 
 
-    light = new THREE.AmbientLight("white", 0.5);  
-    scene.add(light); 
-
     // GUI
     guiControls = { 
-        base: triangle3dsize.x, 
-        height: triangle3dsize.y, 
+        base: rampSize.x, 
+        height: rampSize.y, 
         initSpeed: initialSpeed, 
         buttonStart: startSimulation, 
         buttonPause: pauseSimulation,
@@ -477,7 +474,7 @@ function main()
     var sliderBase = vars.add(guiControls, 'base', 2., 150., 0.1).name('Base (m)');
     var sliderHeight = vars.add(guiControls, 'height', 2., 150., 0.1).name('Height (m)').listen(); // listen makes the variable update if it changes 
     var angleSlider = vars.add(guiControls, 'angle', 0, 80., 0.01).name('Angle (degrees)').listen();
-    var sliderSpeed = vars.add(guiControls, 'initSpeed', 0, 150., 0.01).name('Initial speed (m/s)');
+    var sliderSpeed = vars.add(guiControls, 'initSpeed', 0, 150., 0.1).name('Initial speed (m/s)');
     var sliderRoz = vars.add(guiControls, 'roz', 0, 2., 0.01).name('Roz coeficient (resistance of the surface)');
     var massSlider = vars.add(guiControls, 'mass', 0, 200., 0.1).name('Mass (kg)');
 

@@ -30,20 +30,37 @@ function keyDownEventListener(event)
 	}
 }
 
+const updateZoomOrtho = () => {
+    if ((guiControls.base <= 20 && guiControls.height <= 40) || (guiControls.height <= 20 && guiControls.base <= 40))
+        cameraOrtho.zoom = 10;  
+    else if ((guiControls.base > 20 && guiControls.base < 70) && (guiControls.height > 20 && guiControls.height < 70))
+        cameraOrtho.zoom = 6.5; 
+    else if (guiControls.base >= 120 || guiControls.height >= 120)
+        cameraOrtho.zoom = 3; 
+    else {
+        cameraOrtho.zoom = 4; 
+    }
+}
+
+const updateCubePosition = () =>{
+    // Update the cube position
+    cube.position.set((-guiControls.base/2) + (0.5*Math.sin(angle)), (guiControls.height/2) + (0.5*Math.cos(angle)), 0);
+    cube.rotation.z = -(angle);
+
+    // Update camera fpv (follows the cube)
+    cameraFirstPerson.position.set((-guiControls.base/2) + (0.5*Math.sin(angle)), (guiControls.height/2) + (0.5*Math.cos(angle)), 0);
+    cameraFirstPerson.lookAt(0,5,0); 
+}
+
 function sliderBaseListener()
 {
     ramp.scale.x = guiControls.base;
-    
-    box = new THREE.Box3().setFromObject( ramp );
-    var test = new THREE.Vector3();
-    box.getSize(test);
 
     // With the height and the base, we get the angle and the distance
-    angle = getAngle(test.y, test.x);
+    angle = getAngle(guiControls.height, guiControls.base);
     
-    // Update the cube position
-    cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0); 
-    cube.rotation.z = -(angle);
+    // Update the cube 
+    updateCubePosition();
 
     // Compute the simulation given the mass, roz coeficient and angle 
     accel = getVariables(angle);
@@ -52,41 +69,24 @@ function sliderBaseListener()
     // Update the text values in the HTML
     updateVariableTexts();
 
-    // Update camera fpv
-    cameraFirstPerson.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0); 
-    cameraFirstPerson.lookAt(0,5,0);
-
     // Update camera ortho
-    if ((test.x <= 20 && test.y <= 40) || (test.y <= 20 && test.x <= 40))
-        cameraOrtho.zoom = 10;  
-    else if ((test.x > 20 && test.x < 70) && (test.y > 20 && test.y < 70))
-        cameraOrtho.zoom = 6.5; 
-    else if (test.x >= 120 || test.y >= 120)
-        cameraOrtho.zoom = 3; 
-    else {
-        cameraOrtho.zoom = 4; 
-    }
+    updateZoomOrtho();
 }
 
 function sliderHeightListener()
 {
     ramp.scale.y = guiControls.height;
 
-    box = new THREE.Box3().setFromObject( ramp );
-    var test = new THREE.Vector3();
-    box.getSize(test);
-
     // Move the floor to match the ramp
-    floor.position.y = -test.y / 2 - .1;
-    floorHelper.position.y = -test.y / 2;
+    floor.position.y = -guiControls.height / 2 - .1;
+    floorHelper.position.y = -guiControls.height / 2;
 
     // With the height and the base, we get the angle and the distance
-    angle = getAngle(test.y, test.x);
+    angle = getAngle(guiControls.height, guiControls.base);
     guiControls.angle = (180/Math.PI)*angle;
 
     // Update the cube position
-    cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0);
-    cube.rotation.z = -(angle);
+    updateCubePosition();
 
     // Compute the simulation given the mass, roz coeficient and angle 
     accel = getVariables(angle);
@@ -94,43 +94,27 @@ function sliderHeightListener()
     // Update the text values in the HTML
     updateVariableTexts();
 
-    // Update camera fpv
-    cameraFirstPerson.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0);
-    cameraFirstPerson.lookAt(0,5,0); 
-
     // Update camera ortho
-    if ((test.x <= 20 && test.y <= 40) || (test.y <= 20 && test.x <= 40))
-        cameraOrtho.zoom = 10;  
-    else if ((test.x > 20 && test.x < 70) && (test.y > 20 && test.y < 70))
-        cameraOrtho.zoom = 6.5; 
-    else if (test.x >= 120 || test.y >= 120)
-        cameraOrtho.zoom = 3; 
-    else {
-        cameraOrtho.zoom = 4; 
-    }
+    updateZoomOrtho();
 }
 
 function sliderAngleListener()
 {
-    var test = new THREE.Vector3();
-    box.getSize(test);
-
     angle = (Math.PI/180*guiControls.angle);
-    var newHeight = test.x * Math.tan(angle);
+    var newHeight = guiControls.base * Math.tan(angle);
     ramp.scale.y = newHeight;
     guiControls.height = newHeight;
-
-    box = new THREE.Box3().setFromObject( ramp );
-    var test = new THREE.Vector3();
-    box.getSize(test);
+    console.log(guiControls.height);
 
     // Move the floor to match the ramp
-    floor.position.y = -test.y / 2 - .1;
-    floorHelper.position.y = -test.y / 2;
+    floor.position.y = -guiControls.height / 2 - .1;
+    floorHelper.position.y = -guiControls.height / 2;
 
     // Update the cube position
-    cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0);
-    cube.rotation.z = -(angle);
+    updateCubePosition();
+
+    // Calculate the distance again, because since the height changes, so does the hipotenuse
+    distance = Math.sqrt((guiControls.height*guiControls.height)+(guiControls.base*guiControls.base));
 
     // Compute the simulation given the mass, roz coeficient and angle 
     accel = getVariables(angle);
@@ -138,20 +122,8 @@ function sliderAngleListener()
     // Update the text values in the HTML
     updateVariableTexts();
 
-    // Update camera fpv
-    cameraFirstPerson.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0);
-    cameraFirstPerson.lookAt(0,5,0); 
-
     // Update camera ortho
-    if ((test.x <= 20 && test.y <= 40) || (test.y <= 20 && test.x <= 40))
-        cameraOrtho.zoom = 10;  
-    else if ((test.x > 20 && test.x < 70) && (test.y > 20 && test.y < 70))
-        cameraOrtho.zoom = 6.5; 
-    else if (test.x >= 120 || test.y >= 120)
-        cameraOrtho.zoom = 3; 
-    else {
-        cameraOrtho.zoom = 4; 
-    }
+    updateZoomOrtho();
 }
 
 function sliderSpeedListener()
@@ -193,12 +165,7 @@ function startSimulation()
     pause = false;
 
     // Update the cube position
-    cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0);
-    cube.rotation.z = -(angle);
-
-    // Update camera fpv
-    cameraFirstPerson.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0); 
-    cameraFirstPerson.lookAt(0,5,0);
+    updateCubePosition();
 
     pausedTime = 0;
     clock.start();
@@ -211,7 +178,7 @@ function pauseSimulation()
     if (pause)
         positionalAudio.pause();
     else
-    positionalAudio.play();
+        positionalAudio.play();
 }
 
 function changeBg()
