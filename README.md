@@ -1,6 +1,9 @@
 # Gráficas Computacionales
 ## Plano Inclinado
 
+## Documentación
+* https://docs.google.com/document/d/1LE6tHqryqYI1LzmWK8bt1SJ9EJY3zxxucYNGNYNlSmg/edit?usp=sharing
+
 ### Descripción
 
 ### Tecnologías Utilizadas
