@@ -106,32 +106,6 @@ class Triangle3D extends THREE.Mesh
                                             -0.5,-0.5, -0.5,    //23 4.3
                                             ] );
         
-        var coordTexture = [
-            0., 0.,
-            0., 0.,
-            0., 0.,
-            0., 0.,
-
-            0., 0.,
-            0., 0.,
-            0., 0.,
-            0., 0.,
-
-            0., 0.,
-            0., 0.,
-            0., 0.,
-            1., 1.,
-
-            0., 0.,
-            0., 0.,
-            0., 0.,
-            0., 0.,
-
-            1., 0.,
-            1., 0.,
-            0., 1.,
-            0., 1.,
-        ];
 
         var indices = [ 0,3,6,  // Face triangle front
                         15,12,9, // Face triangle back    
@@ -145,24 +119,12 @@ class Triangle3D extends THREE.Mesh
 
         this.geometry = new THREE.BufferGeometry();
         this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        this.geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(coordTexture), 2));
         this.geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
-        this.geometry.computeFaceNormals();     // Normals
+        //this.geometry.computeFaceNormals();     // Normals
         this.geometry.computeVertexNormals(); //<-- this
-
-        this.texture = new THREE.TextureLoader().load("img/track.png");
-        this.texture.wrapS = THREE.ReapeatWrapping;
-        this.texture.wrapT = THREE.ReapeatWrapping;
-        this.texture.repeat.set(1, 10);
-
-        this.material = new THREE.MeshStandardMaterial({map: this.texture, color: 'white'});
+        this.material = new THREE.MeshPhongMaterial({color: 'rgb(203, 203, 203)', reflectivity: 1, shininess: 100});
     }
 
-    updateTextureRepeat()
-    {
-        this.texture.repeat.set(1, distance/4);
-        this.material = new THREE.MeshStandardMaterial({map: this.texture, color: 'white'});
-    }
 }
 
 class Axes extends THREE.Mesh
@@ -380,7 +342,7 @@ function main()
     // THE RAMP
     ramp = new Triangle3D(); 
     ramp.castShadow = true;
-    ramp.scale.set(25, 25, 2.5);
+    ramp.scale.set(10, 10, 2.5);
 
     // Create a Bounding Box for the ramp to know its height and width
     box = new THREE.Box3().setFromObject( ramp );
@@ -398,11 +360,10 @@ function main()
     updateVariableTexts();
 
     // THE CUBE
-    cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({map: new THREE.TextureLoader().load("img/crate.gif")}));
+    cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({map: new THREE.TextureLoader().load("img/crate.gif")}));
     cube.castShadow = true;
     cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0);
-    // Rotate the angle (negative) so it matches the ramp and it looks like its sliding down
-    cube.rotation.z = -(angle);
+    cube.rotation.z = -(angle); // Rotate the angle (negative) so it matches the ramp and it looks like its sliding down
     
     // THREE js Axes Helper (for global scene)
     var axesHelper = new THREE.AxesHelper(4);
@@ -419,11 +380,10 @@ function main()
     //scene.add(axesHelper);
     scene.add(floorHelper);
 
-    // CAMERA
-
+    // CAMERAS
     // CAMERA PERSPECTIVE
     cameraPerspective = new THREE.PerspectiveCamera(50., canvas.width / canvas.height, 0.1, 10000.);  // CAMERA
-    cameraPerspective.position.set(40, box.max.y / 2, 60)
+    cameraPerspective.position.set(15, box.max.y / 2, 18)
     cameraPerspective.lookAt(scene.position); 
     cameraPerspective.up.set(0., 1., 0.);  
 

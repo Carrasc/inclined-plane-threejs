@@ -40,7 +40,6 @@ function sliderBaseListener()
 
     // With the height and the base, we get the angle and the distance
     angle = getAngle(test.y, test.x);
-    ramp.updateTextureRepeat();
     
     // Update the cube position
     cube.position.set(box.min.x + (0.5*Math.sin(angle)), box.max.y + (0.5*Math.cos(angle)), 0); 
