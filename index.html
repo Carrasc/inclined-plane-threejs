@@ -13,6 +13,26 @@
     <script src="js/main.js" type="text/javascript"></script>
 </head>
 <body onload = main();>
+
+    <div id="info">
+        <div>
+            Acceleration: <label id='accel'></label> m/s<sup>2</sup><br/>
+            Angle: <label id='angle'></label>&deg;<br/>
+            Total time: <label id='totalTime'></label> s<br/>
+            Distance: <label id='distance'></label> m<br/><br/>
+            
+            Speed: <label id='speed'></label> m/s<br/>
+            Elapsed time: <label id='elapsedTime'></label> s<br/><br/>        
+        </div>
+        
+        <div>
+            P: <label id='weight'></label> N<br/>
+            Px: <label id='weightX'></label> N<br/>
+            Py: <label id='weightY'></label> N<br/>
+            Fr: <label id='fr'></label> N<br/>
+        </div>
+    </div>
+
     <canvas id="canvas"></canvas>
 </p>
 </body>
